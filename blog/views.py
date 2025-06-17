@@ -55,7 +55,7 @@ def index(request):
 
     most_fresh_posts = list(Post.objects.annotate(
         comments_count=Count('comments', distinct=True))
-                            .order_by('published_at')
+                            .year(2016)
                             .prefetch_related('author'))[-5:]
 
     most_popular_tags = Tag.objects.annotate(
