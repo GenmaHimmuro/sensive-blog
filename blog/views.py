@@ -58,8 +58,7 @@ def index(request):
                             .year(2016)
                             .prefetch_related('author'))[-5:]
 
-    most_popular_tags = Tag.objects.annotate(
-        posts_count=Count('posts')).order_by('-posts_count')[:5]
+    most_popular_tags = Tag.objects.popular()[:5]
 
     context = {
         'most_popular_posts': [
