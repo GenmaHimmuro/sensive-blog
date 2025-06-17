@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.urls import reverse
 from django.contrib.auth.models import User
 
@@ -8,6 +8,28 @@ class PostQuerySet(models.QuerySet):
     def year(self, year):
         posts_at_year = self.filter(published_at__year=year).order_by('published_at')
         return posts_at_year
+
+    def popular(self):
+        popular_posts = self.annotate(likes_count=Count('likes')).order_by('-likes_count')
+        return popular_posts
+
+    def fetch_with_comments_count(self):
+        """Использовать, когда необходимо одновременно отсортировать
+         посты по популярности и получить по ним количество
+        комментариев. Таким образом идет оптимизация двух вызовов annotate."""
+        posts = []
+        posts_with_comments = Post.objects.filter(id__in=self).annotate(comments_count=Count('comments'))
+        for post in self:
+            for post_with_comments in posts_with_comments:
+                if post_with_comments.id == post.id:
+                    post.comments_count = post_with_comments.comments_count
+                    posts.append(post)
+                    break
+        return posts
+
+    def prefetch_tags_with_count(self):
+        posts = self.prefetch_related(Prefetch('tags', queryset=Tag.objects.annotate(Count('posts'))))
+        return posts
 
 
 class Post(models.Model):
