@@ -102,13 +102,18 @@ def post_detail(request, slug):
 
 
 def tag_filter(request, tag_title):
-    tag = Tag.objects.get(title=tag_title)
+    tag = get_object_or_404(Tag, title=tag_title)
 
-    most_popular_tags = Tag.objects.annotate(posts_count=Count('posts')).order_by('-posts_count')[:5]
+    most_popular_tags = Tag.objects.popular()[:5]
 
-    most_popular_posts = []  # TODO. Как это посчитать?
+    most_popular_posts = (Post.objects.popular()[:5].
+                          select_related('author').
+                          prefetch_tags_with_count().
+                          fetch_with_comments_count())
 
-    related_posts = tag.posts.all()[:20]
+    related_posts = (tag.posts.select_related('author').
+                     prefetch_tags_with_count().
+                     fetch_with_comments_count()[:20])
 
     context = {
         'tag': tag.title,
