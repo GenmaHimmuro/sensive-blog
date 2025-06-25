@@ -20,7 +20,7 @@ def serialize_post_optimized(post):
 def serialize_tag(tag):
     return {
         'title': tag.title,
-        'posts_with_tag': tag.posts__count,
+        'posts_with_tag': tag.posts_count,
     }
 
 
@@ -48,7 +48,7 @@ def index(request):
 
 
 def post_detail(request, slug):
-    posts = Post.objects.annotate(Count('likes')).prefetch_tags_with_count().select_related('author')
+    posts = Post.objects.annotate(likes_count=Count('likes')).prefetch_tags_with_count().select_related('author')
     post = get_object_or_404(posts, slug=slug)
 
     comments = post.comments.select_related('author')
@@ -65,7 +65,7 @@ def post_detail(request, slug):
         'text': post.text,
         'author': post.author.username,
         'comments': serialized_comments,
-        'likes_amount': post.likes__count,
+        'likes_amount': post.likes_count,
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
         'slug': post.slug,

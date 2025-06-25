@@ -17,18 +17,18 @@ class PostQuerySet(models.QuerySet):
         """Использовать, когда необходимо одновременно отсортировать
          посты по популярности и получить по ним количество
         комментариев. Таким образом идет оптимизация двух вызовов annotate."""
-        posts = []
-        posts_with_comments = Post.objects.filter(id__in=self).annotate(comments_count=Count('comments'))
-        for post in self:
-            for post_with_comments in posts_with_comments:
-                if post_with_comments.id == post.id:
-                    post.comments_count = post_with_comments.comments_count
-                    posts.append(post)
-                    break
-        return posts
+        most_popular_posts = self.annotate(likes_count=Count('likes', distinct=True))
+        most_popular_posts_ids = [post.id for post in most_popular_posts]
+        posts_with_comments = Post.objects.filter(id__in=most_popular_posts_ids) \
+            .annotate(comments_count=Count('comments', distinct=True))
+        ids_and_comments = posts_with_comments.values_list('id', 'comments_count')
+        count_for_id = dict(ids_and_comments)
+        for post in most_popular_posts:
+            post.comments_count = count_for_id[post.id]
+        return most_popular_posts
 
     def prefetch_tags_with_count(self):
-        posts = self.prefetch_related(Prefetch('tags', queryset=Tag.objects.annotate(Count('posts'))))
+        posts = self.prefetch_related(Prefetch('tags', queryset=Tag.objects.annotate(posts_count=Count('posts'))))
         return posts
 
 
@@ -70,7 +70,7 @@ class Post(models.Model):
 
 class TagQuerySet(models.QuerySet):
     def popular(self):
-        popular_tags = self.annotate(Count('posts')).order_by('-posts__count')
+        popular_tags = self.annotate(posts_count=Count('posts')).order_by('-posts_count')
         return popular_tags
 
 
